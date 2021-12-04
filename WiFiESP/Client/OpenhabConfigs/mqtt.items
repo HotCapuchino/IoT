@@ -1,0 +1,1 @@
+Switch DoorClosedItem "Door Closed Item" {channel="mqtt:topic:doorClosed:Bulb"}

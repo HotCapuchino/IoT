@@ -1,0 +1,28 @@
+// rule "Closing Door"
+
+// when
+//     Item DoorClosedItem changed
+// then
+//     val mqttActions = getActions("mqtt","mqtt:broker:emqx-io")
+//     if (DoorClosedItem.state == ON) {
+//         mqttActions.publishMQTT("andrew-topic/command","on")
+//     } else {
+//         mqttActions.publishMQTT("andrew-topic/command","off")
+//     }
+// end
+
+rule "MQTT_on"
+when
+        Item DoorClosedItem changed to ON
+then
+        val mqttActions = getActions("mqtt","mqtt:broker:emqx-io")
+        mqttActions.publishMQTT("andrew/command", "on")
+end
+
+rule "MQTT_off"
+when
+        Item DoorClosedItem changed to OFF
+then
+        val mqttActions = getActions("mqtt","mqtt:broker:emqx-io")
+        mqttActions.publishMQTT("andrew/command", "off")
+end

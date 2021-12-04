@@ -1,0 +1,6 @@
+Bridge mqtt:broker:emqx-io "MQTT Bridge" [ host="broker.emqx.io", port=1883, clientID="spAnton" ] {
+    Thing mqtt:topic:doorClosed "Door Closed" (mqtt:broker:emqx-io) {
+        Channels:
+        Type switch : Bulb [stateTopic="andrew/state", on="on", off="off"]
+    }
+}
