@@ -1,60 +1,59 @@
-// Wire Master Writer
-// by Nicholas Zambetti <http://www.zambetti.com>
-
-// Demonstrates use of the Wire library
-// Writes data to an I2C/TWI slave device
-// Refer to the "Wire Slave Receiver" example for use with this
-
-// Created 29 March 2006
-
-// This example code is in the public domain.
-
-
 #include <Wire.h>
 
-//int sendTo;
-//int recvFrom = -1;
-int current_address = 17; // address to join i2c bus
+int sendTo;
+int current_address = 2; // address to join i2c bus
 
 static String payload = "";
-//static String recvPayload = "";
+static String recvPayload = "";
 
 void setup() {
   Serial.begin(9600);   
   Wire.begin(current_address); // join i2c bus (address optional for master)
-  Wire.onReceive(receiveEvent);
+  Wire.onReceive(recieveEvent);
   TWAR = (current_address << 1) | 1; // enables listening broadcast channel
 }
 
-unsigned long t = millis();
-
-
-void receiveEvent(int howMany) {
-
-  String recvPayload = "";
+byte receive_device_id() {
+  byte device_id = -1;
+  byte order = 1;
   
   while (Wire.available()) {
-    char c = Wire.read();
+    byte digit = Wire.read();
 
-    if (c == '\n') {
-      Serial.println("payload: " + String(recvPayload.c_str()));
-      int recvFrom = atoi(recvPayload.c_str());
-      int first_space_index = recvPayload.indexOf(' ');
-      String message = "";   
+    if (digit == ' ' || digit == '\0') break;
 
-      if (first_space_index > 0) {
-        message = recvPayload.substring(recvPayload.indexOf(' ') + 1);
-      }
+    digit -= '0';
 
-      Serial.println("message: " + String(message.c_str()));
-      Serial.println("recieved from: " + String(recvFrom));
+    if (device_id == byte(-1)) device_id = 0;
 
-      recvPayload = "";
-      
-    } else {
-      recvPayload += c;
-    }
-  } 
+    device_id = device_id * order + digit;
+    order *= 10;
+  }
+
+  return device_id;
+}
+
+String receive_message() {
+  String message = "";
+
+  while (Wire.available()) {
+    message += char(Wire.read());
+  }
+
+  return message;
+}
+
+
+void recieveEvent(int howMany) {
+  byte recvFrom = receive_device_id();
+  String message = receive_message();
+
+  if (recvFrom == byte(-1)) {
+    return;
+  }
+  
+  Serial.println("message: " + message);
+  Serial.println("recieved from " + String(recvFrom));
 }
 
 
@@ -63,12 +62,21 @@ void loop() {
     char c = Serial.read();
 
     if (c == '\n') {
-      int sendTo = atoi(payload.c_str());
       int first_space_index = payload.indexOf(' ');
       String message = "";
       
       if (first_space_index > 0) {
         message = payload.substring(payload.indexOf(' ') + 1);
+        String number_chars = payload.substring(0, payload.indexOf(' '));
+        
+        bool is_number = true;
+        for (int i = 0; i < number_chars.length(); i++) {
+          if (!isDigit(number_chars[i])) {
+            is_number = false;
+            break;
+          }
+        }
+        sendTo = is_number ? atoi(number_chars.c_str()) : -1;
       }
 
       if (sendTo > 127 || sendTo < 0) {
@@ -81,10 +89,9 @@ void loop() {
         Wire.beginTransmission(sendTo);
 
         Serial.print("message: ");
-        delay(100);
         Serial.read();
 
-        Wire.write(current_address);
+        Wire.write(String(current_address).c_str());
         Wire.write(' ');
         for (int i = 0; i < message.length(); i++) {
           Serial.print(message[i]);
