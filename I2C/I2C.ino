@@ -1,7 +1,8 @@
 #include <Wire.h>
 
 int sendTo;
-int current_address = 2; // address to join i2c bus
+int current_address = 111; // address to join i2c bus
+byte last_sender = -1;
 
 static String payload = "";
 static String recvPayload = "";
@@ -26,8 +27,7 @@ byte receive_device_id() {
 
     if (device_id == byte(-1)) device_id = 0;
 
-    device_id = device_id * order + digit;
-    order *= 10;
+    device_id = device_id * 10 + digit;
   }
 
   return device_id;
@@ -47,6 +47,7 @@ String receive_message() {
 void recieveEvent(int howMany) {
   byte recvFrom = receive_device_id();
   String message = receive_message();
+  last_sender = recvFrom;
 
   if (recvFrom == byte(-1)) {
     return;
@@ -68,15 +69,25 @@ void loop() {
       if (first_space_index > 0) {
         message = payload.substring(payload.indexOf(' ') + 1);
         String number_chars = payload.substring(0, payload.indexOf(' '));
-        
-        bool is_number = true;
-        for (int i = 0; i < number_chars.length(); i++) {
-          if (!isDigit(number_chars[i])) {
-            is_number = false;
-            break;
+
+        if (number_chars == "p") {
+          if (last_sender != byte(-1)) {
+            sendTo = last_sender;
+          } else {
+            Serial.println("Cannot establish last sender!");
+            sendTo = -1;
           }
+        } else {
+          bool is_number = true;
+          for (int i = 0; i < number_chars.length(); i++) {
+            if (!isDigit(number_chars[i])) {
+              is_number = false;
+              break;
+            }
+          }
+
+           sendTo = is_number ? atoi(number_chars.c_str()) : -1;
         }
-        sendTo = is_number ? atoi(number_chars.c_str()) : -1;
       }
 
       if (sendTo > 127 || sendTo < 0) {
@@ -100,6 +111,7 @@ void loop() {
         Serial.print("\n");
   
         Wire.endTransmission();
+        sendTo = -1;
       }
       
       payload = ""; 
