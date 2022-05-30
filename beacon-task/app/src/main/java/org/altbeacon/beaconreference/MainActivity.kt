@@ -20,6 +20,7 @@ import org.altbeacon.beaconreference.custom_beacon_adapter.CustomBeaconsAdapter
 import org.altbeacon.beaconreference.databinding.ActivityMainBinding
 import org.altbeacon.beaconreference.mobile_beacon_adapter.MobileBeaconsAdapter
 import kotlin.math.abs
+import kotlin.math.round
 
 class MainActivity : AppCompatActivity() {
     lateinit var beaconCountTextView: TextView
@@ -141,6 +142,9 @@ class MainActivity : AppCompatActivity() {
         val stationaryDistances = stationaryBeacons.map(mapFuncDistanceSum)
         val mobileDistances = mobileBeacons.map(mapFuncDistanceSum)
 
+        Log.d("calculateDistances stationary length", stationaryDistances.size.toString())
+        Log.d("calculateDistances mobile length", mobileDistances.size.toString())
+
         val minDist: MutableMap<String, Pair<String, Double>> = mobileBeacons.associate { it.id3.toString() to ("None" to Double.MAX_VALUE) }.toMutableMap()
         mobileDistances.forEach { mobPair ->
             val (mobId, mobDist) = mobPair
@@ -149,7 +153,7 @@ class MainActivity : AppCompatActivity() {
 
                 if (stDist > 0.0) {
                     val currentMinDist: Double = minDist[mobId]?.second!!
-                    val calcMinDist = abs(stDist - mobDist)
+                    val calcMinDist = Math.round( abs(stDist - mobDist) * 100.0) / 100.0
                     Log.d("calcMinDist", "dist from $mobId to $stId is $calcMinDist")
 
                     if (calcMinDist < currentMinDist) {
@@ -159,18 +163,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        mobileBeaconsMap = minDist
-        mobileBeaconsAdapter.notifyDataSetChanged()
+        Log.d("minDist", minDist.toString())
+//
+//        mobileBeaconsMap = minDist
+//        mobileBeaconsAdapter.notifyDataSetChanged()
     }
 
     private val mapFuncDistanceAppending = { it: Beacon ->
         val id = it.id3.toString()
         if (beaconDistances.contains(id)) {
             beaconDistances[id]?.add(it.distance)
+            Log.d("mapFuncDistanceAppending", "beacon distances already contains this $id id")
         } else {
             val newList = ArrayList<Double>()
             newList.add(it.distance)
             beaconDistances[id] = newList
+            Log.d("mapFuncDistanceAppending", "beacon distances does not contain this $id id")
         }
         Unit
     }
